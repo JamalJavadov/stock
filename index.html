@@ -7,7 +7,7 @@
   <meta name="description" content="Instagram üçün stok məhsul vitrin səhifəsi. 4 şəkil, qiymət və material göstərir." />
   <style>
     :root{
-      --bg:#f9fafb;
+      --bg:#ECE4D9;
       --card:#ffffff;
       --text:#111827;
       --muted:#6b7280;
@@ -26,22 +26,21 @@
       font:16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
 
-    .wrap{max-width:1000px;margin:0 auto;padding:24px}
+    .wrap{max-width:1400px;margin:0 auto; text-align: center; color: black; padding: 50px 20px; }
 
     header{
       position:sticky; top:0; z-index:10;
       backdrop-filter:blur(10px);
-      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.6));
+      background:#585858;
       border-bottom:1px solid rgba(0,0,0,.06);
-    }
-    .brand{display:flex;align-items:center;gap:14px; padding:14px 0}
-    .logo{
-      width:46px;height:46px;border-radius:14px;
-      background:var(--accent);               /* sarı gradient və glow çıxarıldı */
-      display:grid;place-items:center;font-weight:900;color:var(--accent-ink)
-    }
+      padding-bottom: 10px;
+    height: 100px; 
+}
 
-    .grid{display:grid;gap:24px;grid-template-columns:repeat(2,1fr)}
+    .brand{align-items:center;gap:14px; padding:5px 0; }
+
+
+    .grid{display:grid;gap:24px;grid-template-columns:repeat(3,1fr)}
     @media(max-width:768px){.grid{grid-template-columns:1fr}}
 
     .card{
@@ -64,10 +63,14 @@
     }
 
     .body{padding:16px}
-    .title{margin:0 0 8px;font-size:18px;font-weight:800}
+    .title{margin:0 0 4px;font-size:25px;font-weight:800}
     .meta{color:var(--muted);font-size:14px}
-    .row{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
-    .price{font-weight:900;font-size:18px}
+    .row {
+  display: flex;
+  justify-content: center; /* içindəkini ortala */
+  margin-top: 4px;
+}
+    .price{font-weight:900;font-size: 30px; text-align: center;}
 
     /* Modal */
     .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:50;padding:16px}
@@ -126,15 +129,30 @@
     .dot.active{ background:#fff }
 
     footer{color:var(--muted);font-size:13px;padding:24px 0;text-align:center;opacity:.75}
+    /* ==== Background Particles ==== */
+#bg-particles{
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;            /* ən altda qalsın */
+  pointer-events: none;  /* klikləri tutmasın */
+}
+
+/* Üst kontent hissəciklərdən yuxarıda olsun */
+header, main, footer, .modal {
+  position: relative;
+  z-index: 1;
+}
+
   </style>
 </head>
 <body>
+    <canvas id="bg-particles" aria-hidden="true"></canvas>
   <header>
     <div class="wrap brand">
-      <div class="logo">S</div>
-      <div>
-        <h1>Stok Vitrini</h1>
-        <small>Premium məhsullar</small>
+     
+        <h1 style="color: #ECE4D9">Stokda Olan Məhsullar</h1>
       </div>
     </div>
   </header>
@@ -143,7 +161,7 @@
     <div id="grid" class="grid"></div>
   </main>
 
-  <footer class="wrap">© <span id="year"></span> Sizin brendiniz</footer>
+  <footer class="wrap">© <span id="year"></span> Ring For Baku</footer>
 
   <!-- Modal -->
   <div id="modal" class="modal" aria-hidden="true">
@@ -166,6 +184,118 @@
       </div>
     </div>
   </div>
+
+  <script>
+/* ==== BOZ HISSƏCIKLƏR — Sadə və performanslı ==== */
+(function(){
+  const canvas = document.getElementById('bg-particles');
+  const ctx = canvas.getContext('2d');
+
+  let dpi = Math.max(1, window.devicePixelRatio || 1);
+  let W = 0, H = 0;
+
+  function resize(){
+    W = canvas.clientWidth;
+    H = canvas.clientHeight;
+    canvas.width  = Math.floor(W * dpi);
+    canvas.height = Math.floor(H * dpi);
+    ctx.setTransform(dpi, 0, 0, dpi, 0, 0);
+    initParticles();
+  }
+
+  // Ekran ölçüsünə görə sıxlıq (m² başına təxminən 0.015 hissəcik)
+  const density = 0.03; // daha çox üçün 0.02 edin
+  let particles = [];
+  let rafId = null;
+  let last = performance.now();
+
+  class P{
+    constructor(){
+      this.x = Math.random()*W;
+      this.y = Math.random()*H;
+      this.r = 2 + Math.random()*4; // 2-dən 6 px-ə qədər
+               // radius
+      this.vx = (Math.random()*0.8 - 0.4);            // yatay sürət
+      this.vy = (Math.random()*0.8 - 0.4);            // şaquli sürət
+      this.a = 0.35 + Math.random()*0.25;             // şəffaflıq
+    }
+    step(dt){
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+
+      // kənarlardan yumşaq geri qayıtma
+      if (this.x < -10 || this.x > W+10) this.vx *= -1;
+      if (this.y < -10 || this.y > H+10) this.vy *= -1;
+    }
+    draw(){
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(128,128,128,${this.a})`;   // boz
+      ctx.fill();
+    }
+  }
+
+  function initParticles(){
+    const target = Math.floor(W * H * density / 1000); // sahəyə görə say
+    particles = [];
+    for(let i=0;i<target;i++) particles.push(new P());
+  }
+
+  function tick(now){
+    const dt = Math.min(40, now - last) * 0.06; // zaman miqyası
+    last = now;
+
+    ctx.clearRect(0,0,W,H);
+
+    // Hissəcikləri çək
+    for(const p of particles){
+      p.step(dt);
+      p.draw();
+    }
+
+    // Yaxın nöqtələr arasında incə xətt (yüngül effekt)
+    const linkDist = Math.min(140, Math.max(90, Math.sqrt(W*H)*0.06));
+    for(let i=0;i<particles.length;i++){
+      for(let j=i+1;j<particles.length;j++){
+        const a = particles[i], b = particles[j];
+        const dx = a.x - b.x, dy = a.y - b.y;
+        const d2 = dx*dx + dy*dy;
+        if (d2 < linkDist*linkDist){
+          const op = 0.08 * (1 - Math.sqrt(d2)/linkDist);
+          ctx.globalAlpha = op;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = 'rgb(180,180,180)'; // açıq boz xətt
+          ctx.lineWidth = 1;
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Performans: tab gizli olduqda dayandır, görünəndə davam et
+  function onVis(){
+    if (document.hidden){
+      if (rafId) cancelAnimationFrame(rafId), rafId = null;
+    } else {
+      last = performance.now();
+      rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  // Başlat
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', onVis);
+  resize();
+  last = performance.now();
+  rafId = requestAnimationFrame(tick);
+})();
+</script>
+
 
   <script>
     /* ==== MƏHSULLAR ==== 
