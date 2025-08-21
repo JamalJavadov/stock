@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Stok Məhsullar — Vitrin</title>
+  <meta name="description" content="Instagram üçün stok məhsul vitrin səhifəsi. 4 şəkil, qiymət və material göstərir." />
+  <style>
+    :root{
+      --bg:#f9fafb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --accent:#2563eb;          /* peşəkar mavi */
+      --accent-ink:#ffffff;
+      --ring: rgba(37,99,235,0.18);
+      --shadow: 0 4px 20px rgba(0,0,0,.08);
+      --radius: 24px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      background: var(--bg);
+      color:var(--text);
+      font:16px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    }
+
+    .wrap{max-width:1000px;margin:0 auto;padding:24px}
+
+    header{
+      position:sticky; top:0; z-index:10;
+      backdrop-filter:blur(10px);
+      background:linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.6));
+      border-bottom:1px solid rgba(0,0,0,.06);
+    }
+    .brand{display:flex;align-items:center;gap:14px; padding:14px 0}
+    .logo{
+      width:46px;height:46px;border-radius:14px;
+      background:var(--accent);               /* sarı gradient və glow çıxarıldı */
+      display:grid;place-items:center;font-weight:900;color:var(--accent-ink)
+    }
+
+    .grid{display:grid;gap:24px;grid-template-columns:repeat(2,1fr)}
+    @media(max-width:768px){.grid{grid-template-columns:1fr}}
+
+    .card{
+      background:var(--card);
+      border:1px solid rgba(0,0,0,.07);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+      transition:transform .25s ease, box-shadow .25s ease;
+      cursor:pointer;
+    }
+    .card:hover{transform:translateY(-4px);box-shadow:0 16px 46px rgba(0,0,0,.12)}
+
+    /* Kart şəkil sahəsi – slideshow zamanı layout sıçramasın deyə kvadrat */
+    .thumb{width:100%; aspect-ratio:1/1; background:#f3f4f6; display:block}
+    .thumb img{
+      width:100%; height:100%; display:block;
+      object-fit:contain; /* şəkil kəsilmədən sığır */
+      background:transparent;
+    }
+
+    .body{padding:16px}
+    .title{margin:0 0 8px;font-size:18px;font-weight:800}
+    .meta{color:var(--muted);font-size:14px}
+    .row{display:flex;align-items:center;justify-content:space-between;margin-top:14px}
+    .price{font-weight:900;font-size:18px}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);z-index:50;padding:16px}
+    .modal.open{display:grid}
+    .dialog{
+      width:min(980px,92vw);
+      max-height:92vh;
+      border-radius:28px;
+      overflow:hidden;
+      background:var(--card);
+      box-shadow:0 28px 80px rgba(0,0,0,.35);
+      display:flex; flex-direction:column;
+      position:relative;
+    }
+    .viewer{
+      flex:1 1 auto; min-height:0;
+      display:flex; align-items:center; justify-content:center;
+      background:#111; /* neytral fon */
+      padding:0; overflow:hidden;
+    }
+    .viewer img{
+      max-width:100%;
+      max-height:80vh;   /* ekrana sığma limiti */
+      width:auto; height:auto;
+      object-fit:contain;
+      display:block;
+      background:transparent;
+    }
+    .dialog .body{padding:16px; background:#fff}
+
+    .close{
+      position:absolute;top:10px;right:10px;
+      background:rgba(0,0,0,.55);border:none;color:#fff;
+      font-size:22px;width:40px;height:40px;border-radius:12px;cursor:pointer
+    }
+
+    /* Modal naviqasiya düymələri */
+    .nav{
+      position:absolute; inset:0; pointer-events:none;
+      display:flex; align-items:center; justify-content:space-between; padding:0 8px;
+    }
+    .nav button{
+      pointer-events:auto; border:none; cursor:pointer;
+      width:44px; height:44px; border-radius:50%;
+      background:rgba(255,255,255,.9);
+      color:#111; font-size:18px;
+      display:grid; place-items:center;
+    }
+
+    /* Dots (indikator) */
+    .dots{ position:absolute; bottom:10px; left:0; right:0; display:flex; gap:6px; justify-content:center; }
+    .dot{
+      width:8px; height:8px; border-radius:999px; background:rgba(255,255,255,.5);
+      border:1px solid rgba(0,0,0,.15)
+    }
+    .dot.active{ background:#fff }
+
+    footer{color:var(--muted);font-size:13px;padding:24px 0;text-align:center;opacity:.75}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap brand">
+      <div class="logo">S</div>
+      <div>
+        <h1>Stok Vitrini</h1>
+        <small>Premium məhsullar</small>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+  </main>
+
+  <footer class="wrap">© <span id="year"></span> Sizin brendiniz</footer>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true">
+      <button class="close" aria-label="Bağla" onclick="Gallery.close()">×</button>
+
+      <div class="viewer">
+        <img id="big" src="" alt="Məhsul şəkli" />
+        <div class="nav">
+          <button id="prev" aria-label="Əvvəlki" onclick="Gallery.prev()">‹</button>
+          <button id="next" aria-label="Növbəti" onclick="Gallery.next()">›</button>
+        </div>
+        <div id="dots" class="dots"></div>
+      </div>
+
+      <div class="body">
+        <h3 id="modalTitle" class="title"></h3>
+        <p id="modalMaterial" class="meta"></p>
+        <p style="font-weight:900;font-size:18px;margin:10px 0 0" id="modalPrice"></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==== MƏHSULLAR ==== 
+       Hər məhsul üçün images: [] içində 1–4 şəkil ver.
+       Əgər 4-dən azdırsa, verilənlər qədərini dövr edəcəyik. */
+    const PRODUCTS=[
+      {title:"Strange üzük",material:"Stainless Steel",price:"12.99 ₼",images:["images/img1.webp","images/img2.webp","images/img3.webp","images/img4.webp"]},
+      {title:"Bones",material:"Stainless Steel",price:"12.99 ₼",images:["images/a4.webp","images/a2.webp","images/a3.webp","images/a1.webp"]},
+      {title:"Wheat",material:"Stainless Steel",price:"12.99 ₼",images:["images/b1.webp","images/b2.webp","images/b3.webp","images/b4.webp"]},
+      {title:"Navigator",material:"Stainless Steel",price:"12.99 ₼",images:["images/c1.webp","images/c2.webp","images/c3.webp","images/c4.webp"]},
+      {title:"Viking",material:"Stainless Steel",price:"12.99 ₼",images:["images/d1.webp","images/d2.webp","images/d3.webp","images/d4.webp"]},
+      {title:"Tree",material:"Stainless Steel",price:"12.99 ₼",images:["images/e1.webp","images/e2.webp","images/e3.webp","images/e4.webp"]},
+      {title:"King",material:"Stainless Steel",price:"12.99 ₼",images:["images/k1.webp","images/k2.webp","images/k3.webp","images/k4.webp"]},
+      {title:"Wolf",material:"Stainless Steel",price:"12.99 ₼",images:["images/v1.webp","images/v2.webp","images/v3.webp","images/v4.webp"]},
+      {title:"Moon",material:"Stainless Steel",price:"12.99 ₼",images:["images/m1.webp","images/m2.webp","images/m3.webp","images/m4.webp"]},
+      {title:"Freemason",material:"Stainless Steel",price:"12.99 ₼",images:["images/i1.webp","images/i2.webp","images/i3.webp","images/i4.webp"]},
+      {title:"Viking",material:"Stainless Steel",price:"12.99 ₼",images:["images/q1.webp","images/q2.webp","images/q3.webp","images/q4.webp"]},
+      {title:"Tree",material:"Stainless Steel",price:"12.99 ₼",images:["images/e1.webp","images/e2.webp","images/e3.webp","images/e4.webp"]},
+      {title:"Navigator",material:"Stainless Steel",price:"12.99 ₼",images:["images/s1.webp","images/s2.webp","images/s3.webp","images/s4.webp"]},
+
+    ];
+
+    /* ==== GRID RENDER + KART SLIDESHOW ==== */
+    const grid=document.getElementById('grid');
+    const intervals=[]; // hoverda dayandırmaq/yenidən başlatmaq üçün
+
+    PRODUCTS.forEach((p,idx)=>{
+      const card=document.createElement('div');
+      card.className='card';
+      // şəkil varsa, ilkini göstər
+      const firstImg=(p.images && p.images.length)? p.images[0] : '';
+      card.innerHTML=`
+        <div class="thumb"><img src="${firstImg}" alt="${p.title}"/></div>
+        <div class="body">
+          <h3 class="title">${p.title}</h3>
+          <div class="meta">${p.material}</div>
+          <div class="row"><div class="price">${p.price}</div></div>
+        </div>`;
+
+      // Kartı klikləyəndə modalı aç, hazırda göstərilən indexi ötürək
+      card.addEventListener('click',()=>{
+        const currentIndex = card._slideIndex || 0;
+        Gallery.open(p, currentIndex);
+      });
+
+      // 2 saniyədən bir şəkli dəyiş (slideshow)
+      if (p.images && p.images.length > 1){
+        const imgEl = card.querySelector('.thumb img');
+        let i=0;
+        const swap=()=>{
+          i = (i+1) % p.images.length;
+          imgEl.src = p.images[i];
+          card._slideIndex = i; // modala ötürmək üçün saxlayırıq
+        };
+        let id=setInterval(swap, 2000);
+        intervals.push(id);
+
+        // Hoverda dayandır, çıxanda davam et – daha peşəkar hiss
+        card.addEventListener('mouseenter',()=>{ clearInterval(id); });
+        card.addEventListener('mouseleave',()=>{ id=setInterval(swap,2000); intervals[idx]=id; });
+      }
+
+      grid.appendChild(card);
+    });
+
+    window.addEventListener('beforeunload',()=>intervals.forEach(id=>clearInterval(id)));
+
+    /* ==== MODAL / GALLERY ==== */
+    const modal=document.getElementById('modal');
+    const big=document.getElementById('big');
+    const dotsWrap=document.getElementById('dots');
+
+    const Gallery={
+      images:[],
+      i:0,
+      open(p, startIndex=0){
+        this.images=(p.images && p.images.length)? p.images : [''];
+        this.i = Math.min(Math.max(0, startIndex), this.images.length-1);
+        this._render();
+        document.getElementById('modalTitle').textContent=p.title;
+        document.getElementById('modalMaterial').textContent=p.material;
+        document.getElementById('modalPrice').textContent=p.price;
+
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden','false');
+        document.body.style.overflow='hidden';
+      },
+      close(){
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden','true');
+        document.body.style.overflow='';
+        dotsWrap.innerHTML='';
+      },
+      next(){ if(!this.images.length) return; this.i=(this.i+1)%this.images.length; this._render(); },
+      prev(){ if(!this.images.length) return; this.i=(this.i-1+this.images.length)%this.images.length; this._render(); },
+      go(k){ this.i=k; this._render(); },
+      _render(){
+        big.src=this.images[this.i] || '';
+        // dots
+        dotsWrap.innerHTML='';
+        this.images.forEach((_,k)=>{
+          const d=document.createElement('div');
+          d.className='dot'+(k===this.i?' active':'');
+          d.addEventListener('click',()=>this.go(k));
+          dotsWrap.appendChild(d);
+        });
+      }
+    };
+
+    // modal fonuna kliklə bağla
+    modal.addEventListener('click',e=>{ if(e.target===modal) Gallery.close(); });
+    // klaviatura dəstəyi
+    window.addEventListener('keydown',e=>{
+      if(!modal.classList.contains('open')) return;
+      if(e.key==='Escape') Gallery.close();
+      if(e.key==='ArrowRight') Gallery.next();
+      if(e.key==='ArrowLeft') Gallery.prev();
+    });
+
+    document.getElementById('year').textContent=new Date().getFullYear();
+  </script>
+</body>
+</html>
